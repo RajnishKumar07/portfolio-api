@@ -1,0 +1,70 @@
+# JWT Authentication for Portfolio API
+
+Implementing secure authentication so users can log in and manage their portfolios. This implementation is inspired by the best practices found in the `e-commerce-api-nest` repository you provided.
+
+## Goal Overview
+Add user registration, login, and logout capabilities. Secure the `POST` endpoints so that only authenticated users can edit or create portfolios. We will use `bcrypt` for password hashing and `HttpOnly` cookies to transport the JWT securely (preventing XSS attacks).
+
+## User Review Required
+> [!IMPORTANT]
+> Since we are using cookies for authentication, the Angular frontend will need to be configured to include `withCredentials: true` in its HTTP requests later on. Let me know if you are okay with this cookie-based approach, or if you prefer sending the token in the Authorization Header (which is slightly less secure but easier to set up for mobile apps).
+
+## Proposed Changes
+
+### Global Utilities & Best Practices (from reference project)
+#### [NEW] `cookie-parser` and `@nestjs/swagger`
+- Install `cookie-parser` for authentication cookies and `@nestjs/swagger` for API documentation.
+
+#### [NEW] [http-exception.filter.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/common/filters/http-exception.filter.ts)
+- Implement a global exception filter to standardize all error responses identically to the e-commerce reference `{"statusCode", "timestamp", "path", "message"}`.
+
+#### [NEW] [transform.interceptor.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/common/interceptors/transform.interceptor.ts)
+- Implement a global interceptor to format all successful HTTP responses properly `{"statusCode", "message", "data"}`.
+
+#### [NEW] [response.util.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/common/utils/response.util.ts)
+- Utility functions to wrap responses cleanly ([createResponse](file:///E:/NestJS/e-commerce-api-nest/src/common/utils/response.util.ts#9-16)).
+
+#### [NEW] Decorators and Guards
+- **[current-user.decorator.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/common/decorators/current-user.decorator.ts)**: A custom `@CurrentUser()` decorator to extract user data from requests easily.
+- **[auth.guard.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/common/guards/auth.guard.ts)**: A global/route-specific guard to automatically verify JWTs from signed cookies via [JwtService](file:///E:/NestJS/e-commerce-api-nest/src/shared/services/jwt.service.ts#6-48).
+
+#### [MODIFY] [main.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/main.ts)
+- Register `cookie-parser`.
+- Register [HttpExceptionFilter](file:///E:/NestJS/e-commerce-api-nest/src/common/filters/http-exception.filter.ts#9-39) and [TransformInterceptor](file:///E:/NestJS/e-commerce-api-nest/src/common/interceptors/transform.interceptor.ts#4-18) globally.
+
+#### [MODIFY] [app.module.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/app.module.ts)
+- Leverage `ConfigService` inside `JwtModule.registerAsync` to securely pull the `JWT_SECRET` from our [.env](file:///E:/NestJS/e-commerce-api-nest/.env) file instead of hardcoding it.
+
+### Configuration
+#### [NEW] [jwt.strategy.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/common/strategies/jwt.strategy.ts)
+- Create a Passport strategy to automatically extract and validate the JWT token from incoming cookies.
+
+### User & Auth Modules
+#### [MODIFY] [users.service.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/modules/users/users.service.ts)
+- Add `bcrypt` to hash passwords before saving them in the [createUser](file:///E:/NestJS/e-commerce-api-nest/src/modules/user/user.service.ts#22-28) method.
+- Add a method to compare passwords during login.
+
+#### [MODIFY] [auth.module.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/modules/auth/auth.module.ts)
+- Scaffold a new `AuthModule`.
+- Import `JwtModule` and register it with a secret key from [.env](file:///E:/NestJS/e-commerce-api-nest/.env).
+
+#### [MODIFY] [auth.controller.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/modules/auth/auth.controller.ts)
+- `POST /api/auth/register`: Create a new user.
+- `POST /api/auth/login`: Validate credentials, sign JWT, and attach it to the [Response](file:///E:/NestJS/e-commerce-api-nest/src/common/utils/response.util.ts#9-16) as an `HttpOnly` cookie.
+- `POST /api/auth/logout`: Clear the cookie.
+
+### Protection
+#### [NEW] [jwt-auth.guard.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/common/guards/jwt-auth.guard.ts)
+- Create a reusable guard that checks if the request has a valid session cookie.
+
+#### [MODIFY] [portfolio.controller.ts](file:///e:/PROJECT/portfolio/portfolio-api/src/modules/portfolio/portfolio.controller.ts)
+- Apply `@UseGuards(JwtAuthGuard)` to the `POST /api/portfolio` endpoint.
+- Extract the user ID from the request and link the newly created portfolio to that specific user.
+
+## Verification Plan
+1. **Automated Setup:** Use `npm run start:dev` to ensure the app compiles without errors.
+2. **API Testing (Manual):**
+   - Use `curl` or Postman to trigger `/api/auth/register`.
+   - Trigger `/api/auth/login` and verify the `Set-Cookie` header is returned.
+   - Trigger `/api/auth/logout` and verify the cookie is invalidated.
+   - Attempt to trigger `POST /api/portfolio` without a cookie to ensure it returns `401 Unauthorized`.
