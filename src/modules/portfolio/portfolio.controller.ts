@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Delete, Put } from '@nestjs/common';
 import { PortfolioService } from './portfolio.service';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
@@ -17,13 +17,30 @@ export class PortfolioController {
     return this.portfolioService.create({ ...createPortfolioDto, userId: user.userId } as any);
   }
 
+  @Get('user/me')
+  @UseGuards(AuthGuard)
+  findAllByUser(@CurrentUser() user: any) {
+    return this.portfolioService.findAllByUser(user.userId);
+  }
+
   @Get(':slug')
   findOne(@Param('slug') slug: string) {
     return this.portfolioService.findOneBySlug(slug);
   }
 
+  @Put(':slug')
+  @UseGuards(AuthGuard)
+  update(
+    @Param('slug') slug: string,
+    @Body() updatePortfolioDto: CreatePortfolioDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.portfolioService.updateBySlug(slug, updatePortfolioDto, user.userId);
+  }
+
   @Delete(':slug')
-  delete(@Param('slug') slug: string) {
-    return this.portfolioService.deleteBySlug(slug);
+  @UseGuards(AuthGuard)
+  delete(@Param('slug') slug: string, @CurrentUser() user: any) {
+    return this.portfolioService.deleteBySlug(slug, user.userId);
   }
 }

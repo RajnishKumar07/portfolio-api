@@ -8,6 +8,14 @@ export class CreatePersonalInfoDto {
   @IsString()
   title: string;
 
+  @IsOptional()
+  @IsString()
+  role?: string;
+
+  @IsOptional()
+  @IsString()
+  tagline?: string;
+
   @IsString()
   about: string;
 

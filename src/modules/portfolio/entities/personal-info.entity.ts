@@ -18,6 +18,12 @@ export class PersonalInfo {
   @Column()
   title: string;
 
+  @Column({ nullable: true })
+  role: string;
+
+  @Column({ nullable: true })
+  tagline: string;
+
   @Column('text')
   about: string;
 
