@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Param, UseGuards, Delete, Put } from '@nes
 import { PortfolioService } from './portfolio.service';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
+import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('portfolio')
@@ -24,8 +25,9 @@ export class PortfolioController {
   }
 
   @Get(':slug')
-  findOne(@Param('slug') slug: string) {
-    return this.portfolioService.findOneBySlug(slug);
+  @UseGuards(OptionalAuthGuard)
+  findOne(@Param('slug') slug: string, @CurrentUser() user: any) {
+    return this.portfolioService.findOneBySlug(slug, user?.userId);
   }
 
   @Put(':slug')

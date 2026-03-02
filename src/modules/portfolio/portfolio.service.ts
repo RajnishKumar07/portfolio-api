@@ -27,7 +27,7 @@ export class PortfolioService {
     });
   }
 
-  async findOneBySlug(slug: string): Promise<Portfolio> {
+  async findOneBySlug(slug: string, requestingUserId?: string): Promise<Portfolio> {
     const portfolio = await this.portfolioRepository.findOne({
       where: { slug },
       relations: ['user', 'personalInfo', 'experiences', 'educations', 'projects', 'skills', 'certifications'],
@@ -37,11 +37,15 @@ export class PortfolioService {
       throw new NotFoundException(`Portfolio with slug ${slug} not found.`);
     }
 
+    if (!portfolio.isPublic && portfolio.user?.id !== requestingUserId) {
+      throw new UnauthorizedException('This portfolio is currently private.');
+    }
+
     return portfolio;
   }
 
   async updateBySlug(slug: string, updatePortfolioDto: CreatePortfolioDto, userId: string): Promise<Portfolio> {
-    const existing = await this.findOneBySlug(slug);
+    const existing = await this.findOneBySlug(slug, userId);
     
     if (existing.user?.id !== userId) {
         throw new UnauthorizedException('You can only edit your own portfolio');
@@ -55,7 +59,7 @@ export class PortfolioService {
   }
 
   async deleteBySlug(slug: string, userId?: string): Promise<void> {
-    const portfolio = await this.findOneBySlug(slug);
+    const portfolio = await this.findOneBySlug(slug, userId);
     
     if (userId && portfolio.user?.id !== userId) {
         throw new UnauthorizedException('You can only delete your own portfolio');

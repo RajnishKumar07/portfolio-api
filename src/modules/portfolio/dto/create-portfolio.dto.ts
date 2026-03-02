@@ -150,6 +150,11 @@ export class CreatePortfolioDto {
   @IsBoolean()
   isPublic?: boolean;
 
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  languages?: string[];
+
   @ValidateNested()
   @Type(() => CreatePersonalInfoDto)
   personalInfo: CreatePersonalInfoDto;

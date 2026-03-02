@@ -1,10 +1,12 @@
-import { Body, Controller, Get, HttpStatus, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { createResponse } from '../../common/utils/response.util';
 import { HandleJwtService } from '../../shared/services/jwt.service';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -12,6 +14,12 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly jwtService: HandleJwtService,
   ) {}
+
+  @Get('me')
+  @UseGuards(AuthGuard)
+  async getMe(@CurrentUser() user: any) {
+    return createResponse(HttpStatus.OK, 'Authenticated user', user);
+  }
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
@@ -32,7 +40,10 @@ export class AuthController {
       email: user.email,
     });
 
-    return createResponse(HttpStatus.OK, 'Login successful');
+    return createResponse(HttpStatus.OK, 'Login successful', {
+      id: user.id,
+      email: user.email
+    });
   }
 
   @Get('logout')

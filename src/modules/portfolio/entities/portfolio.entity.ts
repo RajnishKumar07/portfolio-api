@@ -34,6 +34,9 @@ export class Portfolio {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @Column('simple-array', { nullable: true })
+  languages: string[];
+
   // Relations
   @ManyToOne(() => User, (user) => user.portfolios, { onDelete: 'CASCADE' })
   user: User;
