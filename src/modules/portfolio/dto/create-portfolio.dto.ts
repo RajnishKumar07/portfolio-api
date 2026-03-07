@@ -9,8 +9,8 @@ export class CreatePersonalInfoDto {
   title: string;
 
   @IsOptional()
-  @IsString()
-  role?: string;
+  @IsBoolean()
+  isAvailableForWork?: boolean;
 
   @IsOptional()
   @IsString()

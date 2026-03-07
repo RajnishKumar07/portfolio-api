@@ -18,8 +18,8 @@ export class PersonalInfo {
   @Column()
   title: string;
 
-  @Column({ nullable: true })
-  role: string;
+  @Column({ default: true })
+  isAvailableForWork: boolean;
 
   @Column({ nullable: true })
   tagline: string;

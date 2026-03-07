@@ -1,0 +1,89 @@
+# Final UI Polish & Bug Fixes Walkthrough
+
+This document outlines the final polishing steps and critical bug fixes implemented for the portfolio builder application. 
+
+## Final UI Testing & Polish
+- Used an automated browser agent to fully test the UI form from end-to-end, injecting Maximum Data (multiple projects, deep arrays, very long text strings) to verify stability.
+- The UI handles large amounts of data beautifully without breaking layout bounds.
+- Noted a few UX improvements that could be iterated on (like dynamic navbar logos and form auto-scrolling).
+
+## Verification Plan
+
+### Manual Verification
+- A user can register, log in, create a portfolio using all dynamic arrays (Languages, Features, Tags, Responsibilities), and save successfully.
+
+## 1. Dynamic Form Arrays
+Replaced all comma/pipe-delimited string textareas with robust **Angular FormArrays**. 
+- Users can now click `+ Add Item` to dynamically add specific inputs for Features, Technologies, Responsibilities, and Languages.
+- Each item has its own dedicated input element and a remove button, significantly improving the UX.
+- The [portfolio-form.ts](file:///e:/PROJECT/portfolio/portfolio-app/src/app/features/dashboard/components/portfolio-form/portfolio-form.ts) backend mapping logic was completely rewritten to submit structured arrays to the NestJS API cleanly.
+
+## 2. Tagline Input Integration
+Added a dedicated `Tagline` field inside the Personal Info step. 
+- The Hero component was updated to prioritize this new Tagline field over the default job title fallback, giving users absolute control over their primary headline.
+
+## 3. Custom CSS Scrollbars
+Implemented custom webkit scrollbar styling globally in [styles.scss](file:///e:/PROJECT/portfolio/portfolio-app/src/styles.scss) using the `.scrollbar-custom` class. 
+- Overflowing grids, textareas, and containers now feature a sleek, thin scrollbar with a custom track and a hoverable teal thumb that matches the global application theme.
+
+## 4. Conditional UI Rendering
+Fixed issues where static descriptive text or empty social links (like GitHub/LinkedIn buttons) would awkwardly appear even if the user provided no data for them.
+- Deployed `@if` blocks across [hero.html](file:///e:/PROJECT/portfolio/portfolio-app/src/app/features/hero/hero.html) and [projects.html](file:///e:/PROJECT/portfolio/portfolio-app/src/app/features/projects/projects.html).
+- Implemented intelligent protocol checking (`.startsWith('http')`) to ensure user-provided links don't break routing by appending `https://` universally if omitted.
+
+## 5. Authentication Persistence Fix
+Resolved a critical issue where hard-refreshing the dashboard logged the user out visually, despite their `HttpOnly` token remaining valid.
+- **Backend**: Added a secure `GET /api/auth/me` endpoint in NestJS that decodes the HttpOnly JWT using the existing AuthGuard.
+- **Frontend**: Created a [checkAuth()](file:///e:/PROJECT/portfolio/portfolio-app/src/app/services/auth.service.ts#46-57) method in the [AuthService](file:///e:/PROJECT/portfolio/portfolio-app/src/app/services/auth.service.ts#11-58) that pings this new endpoint and hydrates the `currentUser` signal.
+- **Bootstrapping**: Leveraged Angular's `APP_INITIALIZER` token in [app.config.ts](file:///e:/PROJECT/portfolio/portfolio-app/src/app/app.config.ts). The Angular application now explicitly pauses its initial routing sequence until [checkAuth()](file:///e:/PROJECT/portfolio/portfolio-app/src/app/services/auth.service.ts#46-57) completes. This guarantees the AuthGuard has the correct session state before validating dashboard access!
+
+## 6. UI Rendering Gap Fixes
+
+We identified through our UI testing that several fields collected by the form and schema were missing from the public templates. We fixed these rendering bugs to maintain UI/Data parity:
+- **Location**: Added conditional rendering to the [Hero](file:///e:/PROJECT/portfolio/portfolio-app/src/app/features/hero/hero.ts#5-56) section to display the user's location with an elegant pin icon beneath their job title.
+- **Phone Number**: Updated the [Footer](file:///e:/PROJECT/portfolio/portfolio-app/src/app/core/layout/footer/footer.ts#7-17) contact section to include a properly formatted `tel:` link when a phone number is provided.
+- **Education Description**: Updated the [Education](file:///e:/PROJECT/portfolio/portfolio-api/src/modules/portfolio/entities/education.entity.ts#10-36) timeline card to beautifully format and display the description field underneath the degree classification.
+
+![Hero Section Rendering New Fields](C:\Users\Rajnish\.gemini\antigravity\brain\19afe22d-2157-474f-89aa-6c86c50b8f4c\hero_advanced_1772437064696.png)
+![Footer and Education Content Rendering](C:\Users\Rajnish\.gemini\antigravity\brain\19afe22d-2157-474f-89aa-6c86c50b8f4c\footer_advanced_1772437111820.png)
+
+## 7. Expanding Form Inputs for Database Schema Accuracy
+
+While reviewing the TypeORM models for the portfolio architecture, we discovered several advanced fields (e.g. `Experience.projects`, `Experience.recognition`) were present in the backend but unreachable because they had no corresponding inputs in the Angular Form Builder. We added these nested `FormArray` and `FormGroup` elements into the Builder workflow:
+
+```html
+<!-- Added logic to handle parsing deeply nested arrays like Project Points -->
+<div formArrayName="projects" class="space-y-4">
+  @for (epCtrl of $any(expCtrl.get('projects')).controls; track epCtrl; let epIdx = $index) {
+     <!-- Project Name, Tech Stack, and Bullet Points Array injected -->
+  }
+</div>
+```
+
+Testing verified that creating a Job with an embedded "Notable Project" and "Recognition" accurately compiled these fields into JSON, saved them to the PostgreSQL database, and dynamically rendered them onto the beautiful portfolio format.
+
+- **Conditional Project Features**: If a user creates a project but leaves the "Key Features" list empty, the entire "Key Features" heading and its container are automatically hidden from the UI to prevent empty space in the project card.
+- **Project Images**: Added a thumbnail image URL input for individual projects. If a thumbnail is supplied, the Tailwind CSS `object-cover` styling was corrected to ensure the image seamlessly stretches *edge-to-edge* across the project card padding, fixing a noticeable UI misalignment gap.
+
+![Experience Section rendering DB DB-nested arrays](C:\Users\Rajnish\.gemini\antigravity\brain\19afe22d-2157-474f-89aa-6c86c50b8f4c\experience_advanced_v2_1772437095426.png)
+
+## 8. Portfolio Privacy Toggles
+
+During testing, we discovered the "Publicly Accessible" toggle inside the UI settings was passing boolean data to the database but was ignored by the backend data-fetching architecture. 
+
+**Backend Fix:** 
+- Updated [portfolio.service.ts](file:///e:/PROJECT/portfolio/portfolio-app/src/app/services/portfolio.service.ts) to block queries finding a portfolio by slug if `isPublic` is false *unless* the user requesting it is the owner.
+- Created a custom NestJS [OptionalAuthGuard](file:///e:/PROJECT/portfolio/portfolio-api/src/common/guards/optional-auth.guard.ts#9-30) that non-intrusively parses `HttpOnly` JWTs if they exist in the browser request headers to identify portfolio owners without forcing a rigid `/login` redirect on anonymous visitors.
+
+**Frontend Fix:**
+- Adjusted the [HomeComponent](file:///e:/PROJECT/portfolio/portfolio-app/src/app/features/home/home.ts#16-64) (the main Public Portfolio viewer page) to catch HTTP 401 (Unauthorized) and 404 (Not Found) errors returned by the guarded API. Visually hanging screens are prevented by immediately redirecting the lost user back to the builder marketing homepage.
+- Updated [portfolio.service.ts](file:///e:/PROJECT/portfolio/portfolio-app/src/app/services/portfolio.service.ts) to include `{ withCredentials: true }` on the `GET /portfolio/:slug` HTTP request. This securely attaches the owner's `HttpOnly` JWT cookie so the backend can verify their identity and allow them to preview their own private portfolios.
+
+## 9. Routing UX Refinements
+
+Based on manual testing, three critical UX routing flows were resolved:
+- **Root URL Dead End**: Previously, visiting the bare root URL (`/`) would trap the user on an infinite "Loading Portfolio" screen because the router attempted to load a non-existent default slug. The root route was updated to permanently redirect to `/dashboard`. If the user has no active session, the Angular [authGuard](file:///e:/PROJECT/portfolio/portfolio-app/src/app/core/guards/auth.guard.ts#6-17) seamlessly escorts them back to `/login`.
+- **Missing Sidebar User Data**: When a user logged in, their email wouldn't show up in the dashboard sidebar until they refreshed the page. This occurred because the backend `/login` endpoint wasn't returning the user object in its JSON response. We updated the NestJS [AuthController](file:///e:/PROJECT/portfolio/portfolio-api/src/modules/auth/auth.controller.ts#11-59) to return the [id](file:///e:/PROJECT/portfolio/portfolio-api/src/shared/services/jwt.service.ts#18-21) and `email` immediately upon authenticating, hydrating the frontend signals instantly.
+- **Login Route Protection**: Logged-in users who manually navigated back to `/login` or `/register` were presented with the authentication forms again. We implemented a [guestGuard](file:///e:/PROJECT/portfolio/portfolio-app/src/app/core/guards/guest.guard.ts#5-16) in the Angular Router that checks the active session and automatically bounces authenticated users safely back to their `/dashboard`.
+
+The application is now highly resilient, feature-complete, and offers a premium user experience!
