@@ -37,6 +37,10 @@ export class CreatePersonalInfoDto {
   @IsOptional()
   @IsString()
   linkedinUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  resumeUrl?: string;
 }
 
 export class CreateExperienceDto {

@@ -42,6 +42,9 @@ export class PersonalInfo {
   @Column({ nullable: true })
   linkedinUrl: string;
 
+  @Column({ nullable: true })
+  resumeUrl: string;
+
   @OneToOne(() => Portfolio, (portfolio) => portfolio.personalInfo, {
     onDelete: 'CASCADE',
   })
