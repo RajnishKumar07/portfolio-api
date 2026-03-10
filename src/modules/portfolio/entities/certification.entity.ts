@@ -7,6 +7,9 @@ import {
 } from 'typeorm';
 import { Portfolio } from './portfolio.entity';
 
+/**
+ * Represents an external certification link attached to a Portfolio.
+ */
 @Entity('certifications')
 export class Certification {
   @PrimaryGeneratedColumn('uuid')

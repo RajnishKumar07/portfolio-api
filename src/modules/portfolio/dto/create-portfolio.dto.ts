@@ -1,6 +1,11 @@
 import { IsString, IsBoolean, IsOptional, ValidateNested, IsArray, IsUrl } from 'class-validator';
 import { Type } from 'class-transformer';
 
+/**
+ * Data Transfer Object for validating Personal Information payloads.
+ * Includes optional fields like `resumeUrl` (Cloudinary upload payload) and
+ * standard biographic `about` details.
+ */
 export class CreatePersonalInfoDto {
   @IsString()
   name: string;
@@ -43,6 +48,10 @@ export class CreatePersonalInfoDto {
   resumeUrl?: string;
 }
 
+/**
+ * DTO for validating a single Experience entry.
+ * Validates dynamic array-based responsibilities and attached projects.
+ */
 export class CreateExperienceDto {
   @IsString()
   role: string;
@@ -74,6 +83,9 @@ export class CreateExperienceDto {
   recognition?: any;
 }
 
+/**
+ * DTO for validating Education records.
+ */
 export class CreateEducationDto {
   @IsString()
   degree: string;
@@ -88,6 +100,10 @@ export class CreateEducationDto {
   description: string;
 }
 
+/**
+ * DTO for validating Project arrays.
+ * Handles nested arrays of string literals for features, tags, and tech stacks.
+ */
 export class CreateProjectDto {
   @IsString()
   title: string;
@@ -129,6 +145,9 @@ export class CreateProjectDto {
   tags?: string[];
 }
 
+/**
+ * DTO for validating Skill Categories (e.g. 'Frontend', 'Backend') and their nested item lists.
+ */
 export class CreateSkillDto {
   @IsString()
   category: string;
@@ -138,6 +157,9 @@ export class CreateSkillDto {
   items: string[];
 }
 
+/**
+ * DTO for external Certification links.
+ */
 export class CreateCertificationDto {
   @IsString()
   title: string;
@@ -146,6 +168,12 @@ export class CreateCertificationDto {
   url: string;
 }
 
+/**
+ * The Master DTO for creating or updating a complete Portfolio Tree.
+ * Leverages `@ValidateNested()` and `class-transformer`'s `@Type()` to recursively
+ * validate the massive JSON payload object all the way down to the deepest nested array elements.
+ * Critical for preventing malformed data from reaching the TypeORM saving layer.
+ */
 export class CreatePortfolioDto {
   @IsString()
   slug: string;

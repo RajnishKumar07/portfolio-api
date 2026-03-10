@@ -7,6 +7,11 @@ import { CloudinaryAsset } from './entities/cloudinary-asset.entity';
 import { Portfolio } from '../portfolio/entities/portfolio.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
+/**
+ * Service orchestrating cloud file storage via Cloudinary and local database tracking.
+ * Includes a scheduled Cron job ensuring cloud repository hygiene by permanently 
+ * sweeping any unused/orphaned files.
+ */
 @Injectable()
 export class UploadService {
   private readonly logger = new Logger(UploadService.name);
@@ -25,12 +30,19 @@ export class UploadService {
     });
   }
 
+  /**
+   * Uploads a raw buffer file explicitly to Cloudinary's secure tier.
+   * If successful, records the unique Cloudinary `public_id` and URL in the local
+   * `CloudinaryAsset` tracker database table so the Cron sweep can monitor its lifecycle.
+   */
   async uploadImage(file: Express.Multer.File): Promise<string> {
     return new Promise((resolve, reject) => {
+      // 1. Open a writable stream directly to Cloudinary's infrastructure
       cloudinary.uploader.upload_stream(
         { 
           folder: 'portfolio_images',
-          resource_type: 'auto' // Supports raw files like PDFs in addition to images
+          // 'auto' allows Cloudinary to dynamically sniff the buffer and accept PDFs natively alongside images without breaking
+          resource_type: 'auto' 
         },
         async (error, result) => {
           if (error) {
@@ -39,7 +51,8 @@ export class UploadService {
           }
 
           try {
-            // Log the upload in our database tracker
+            // 2. Synchronize the successful cloud upload with our local database tracker
+            // This ensures our nightly Cron job knows this asset exists and can gracefully delete it if it later becomes orphaned
             const asset = this.assetRepository.create({
               publicId: result.public_id,
               url: result.secure_url,
@@ -57,24 +70,15 @@ export class UploadService {
     });
   }
 
+  /**
+   * Orchestrates the deletion of a specific Cloudinary asset by its raw URL.
+   */
   async deleteImage(url: string): Promise<boolean> {
     try {
-      // Extract the Cloudinary public_id from the URL string. 
-      // Example URL: https://res.cloudinary.com/cloud_name/raw/upload/v1234567/portfolio_images/xyz.pdf
-      // or image/upload... 
-      // The public ID is "portfolio_images/xyz" (includes folder name, without the extension)
-      const parts = url.split('/');
-      const fileWithExt = parts.pop(); // "xyz.pdf"
-      const folder = parts.pop();      // "portfolio_images"
-      if (!fileWithExt || !folder) return false;
-      
-      const fileName = fileWithExt.split('.')[0];
-      const publicId = `${folder}/${fileName}`;
+      const publicId = this.extractPublicIdFromUrl(url);
+      if (!publicId) return false;
 
-      // resource_type must be provided for deletion if it's not an image
-      const isRaw = url.includes('/raw/upload/');
-      const resourceType = isRaw ? 'raw' : 'image';
-
+      const resourceType = this.determineResourceType(url);
       const res = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
       return res.result === 'ok';
     } catch (error) {
@@ -83,60 +87,106 @@ export class UploadService {
     }
   }
 
+  /**
+   * Helper extracting string identifiers required for Cloudinary API deletion payloads.
+   */
+  private extractPublicIdFromUrl(url: string): string | null {
+    const parts = url.split('/');
+    const fileWithExt = parts.pop();
+    const folder = parts.pop();
+    
+    if (!fileWithExt || !folder) {
+      return null;
+    }
+      
+    const fileName = fileWithExt.split('.')[0];
+    return `${folder}/${fileName}`;
+  }
+
+  /**
+   * Determines if the remote Cloudinary asset is a raw PDF payload or native image payload.
+   */
+  private determineResourceType(url: string): string {
+    return url.includes('/raw/upload/') ? 'raw' : 'image';
+  }
+
+  /**
+   * Scheduled task running exactly at midnight server time.
+   * 1. Fetches all historical successful Cloudinary uploads logged in the `CloudinaryAsset` table.
+   * 2. Scans every single active `Portfolio` in the database for `resumeUrl` and `imagePath` usage.
+   * 3. Performs a Set-diff to find orphaned links.
+   * 4. Physically commands Cloudinary to delete the stranded blobs, then wipes the local tracker record.
+   */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async cleanupOrphanedAssets() {
     this.logger.log('Starting Cloudinary orphaned asset cleanup cron job...');
     
     try {
-      // 1. Get all assets we've ever uploaded
       const trackedAssets = await this.assetRepository.find();
       if (trackedAssets.length === 0) {
         this.logger.log('No assets to check. Ending cleanup.');
         return;
       }
 
-      // 2. Fetch all current Portfolios
       const portfolios = await this.portfolioRepository.find({
         relations: ['personalInfo', 'projects'],
       });
 
-      // 3. Extract all currently active URLs
-      const activeUrls = new Set<string>();
-      for (const p of portfolios) {
-        if (p.personalInfo?.resumeUrl) {
-          activeUrls.add(p.personalInfo.resumeUrl);
-        }
-        if (p.projects && p.projects.length > 0) {
-          for (const proj of p.projects) {
-            if (proj.imagePath) {
-              activeUrls.add(proj.imagePath);
-            }
-          }
-        }
-      }
-
-      // 4. Find the orphans
+      const activeUrls = this.extractAllActiveUrls(portfolios);
       const orphans = trackedAssets.filter(asset => !activeUrls.has(asset.url));
       
       this.logger.log(`Found ${orphans.length} orphaned assets out of ${trackedAssets.length} total.`);
 
-      // 5. Purge Cloudinary AND the DB Tracker row safely
       for (const orphan of orphans) {
-        this.logger.log(`Deleting orphan: ${orphan.publicId} (${orphan.url})`);
-        try {
-          // Instruct Cloudinary to delete the physical file
-          await cloudinary.uploader.destroy(orphan.publicId, { resource_type: orphan.resourceType });
-          
-          // Delete our DB record for it
-          await this.assetRepository.remove(orphan);
-        } catch(delErr) {
-          this.logger.error(`Failed to delete orphaned asset ${orphan.publicId}`, delErr);
-        }
+        await this.purgeOrphanSafely(orphan);
       }
       
       this.logger.log('Cleanup complete.');
     } catch (e) {
       this.logger.error('Fatal error during cleanup cron job', e);
+    }
+  }
+
+  /**
+   * Scans the active Portfolio structures extracting any strings mapping to DB tracking.
+   */
+  private extractAllActiveUrls(portfolios: Portfolio[]): Set<string> {
+    const activeUrls = new Set<string>();
+    
+    for (const p of portfolios) {
+      this.addResumeIfPresent(p, activeUrls);
+      this.addProjectImagesIfPresent(p, activeUrls);
+    }
+    
+    return activeUrls;
+  }
+
+  private addResumeIfPresent(p: Portfolio, activeUrls: Set<string>): void {
+    if (p.personalInfo && p.personalInfo.resumeUrl) {
+      activeUrls.add(p.personalInfo.resumeUrl);
+    }
+  }
+
+  private addProjectImagesIfPresent(p: Portfolio, activeUrls: Set<string>): void {
+    if (p.projects && Array.isArray(p.projects)) {
+      for (const proj of p.projects) {
+        if (proj.imagePath) {
+          activeUrls.add(proj.imagePath);
+        }
+      }
+    }
+  }
+
+  /**
+   * Executes the physical Cloudinary deletion payload and strips the local MariaDB tracking row.
+   */
+  private async purgeOrphanSafely(orphan: CloudinaryAsset): Promise<void> {
+    this.logger.log(`Deleting orphan: ${orphan.publicId} (${orphan.url})`);
+    try {
+      await cloudinary.uploader.destroy(orphan.publicId, { resource_type: orphan.resourceType });
+      await this.assetRepository.remove(orphan);
+    } catch(delErr) {
+      this.logger.error(`Failed to delete orphaned asset ${orphan.publicId}`, delErr);
     }
   }
 }

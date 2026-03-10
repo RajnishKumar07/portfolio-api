@@ -7,6 +7,10 @@ import {
 } from 'typeorm';
 import { Portfolio } from './portfolio.entity';
 
+/**
+ * Represents a categorized list of skills (e.g. "Frontend": ["React", "Angular"]).
+ * Connected via Many-to-One to the parent `Portfolio`.
+ */
 @Entity('skills')
 export class Skill {
   @PrimaryGeneratedColumn('uuid')

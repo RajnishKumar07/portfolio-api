@@ -17,6 +17,14 @@ import { Skill } from './skill.entity';
 import { Education } from './education.entity';
 import { Certification } from './certification.entity';
 
+/**
+ * The root aggregate entity for a Portfolio.
+ * Represents a single configurable public profile (e.g. yourdomain.com/p/:slug).
+ * Acts as the parent node for a massive relational tree including Personal Info, 
+ * Experiences, Educations, Projects, Skills, and Certifications. 
+ * 'Cascade' is heavily utilized here so saving the root Portfolio automatically 
+ * persists all nested child items.
+ */
 @Entity('portfolios')
 export class Portfolio {
   @PrimaryGeneratedColumn('uuid')

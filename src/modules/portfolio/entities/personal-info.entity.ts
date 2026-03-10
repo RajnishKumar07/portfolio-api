@@ -7,6 +7,11 @@ import {
 } from 'typeorm';
 import { Portfolio } from './portfolio.entity';
 
+/**
+ * Holds direct biographic and contact information for a portfolio.
+ * Connected via a strictly One-to-One relationship to the root `Portfolio`.
+ * If the parent Portfolio is deleted, this record is automatically purged (CASCADE).
+ */
 @Entity('personal_info')
 export class PersonalInfo {
   @PrimaryGeneratedColumn('uuid')

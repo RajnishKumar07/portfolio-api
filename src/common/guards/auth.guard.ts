@@ -7,6 +7,12 @@ import {
 import { Request } from 'express';
 import { HandleJwtService } from '../../shared/services/jwt.service';
 
+/**
+ * JWT Authentication Guard.
+ * Intercepts incoming HTTP requests, extracts the secure HTTP-only cookie, 
+ * validates the JWT payload, and forcefully attaches the user object to the request.
+ * Throws 401 Unauthorized if the token is missing or invalid.
+ */
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(

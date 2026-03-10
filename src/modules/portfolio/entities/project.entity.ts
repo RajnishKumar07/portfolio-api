@@ -7,6 +7,11 @@ import {
 } from 'typeorm';
 import { Portfolio } from './portfolio.entity';
 
+/**
+ * Represents a single Project showcase inside a Portfolio.
+ * Uses flexible `json` columns for dynamic list attributes like `features` and `techStack`
+ * to minimize unnecessary DB join tables for tiny string arrays.
+ */
 @Entity('projects')
 export class Project {
   @PrimaryGeneratedColumn('uuid')

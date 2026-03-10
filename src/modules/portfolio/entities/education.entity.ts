@@ -7,6 +7,10 @@ import {
 } from 'typeorm';
 import { Portfolio } from './portfolio.entity';
 
+/**
+ * Represents a single educational degree or achievement within a Portfolio.
+ * Connected via a Many-to-One relationship to the root `Portfolio`.
+ */
 @Entity('educations')
 export class Education {
   @PrimaryGeneratedColumn('uuid')

@@ -11,11 +11,16 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
+/**
+ * The root module of the application.
+ * Bootstraps standard configuration systems (ConfigModule), database ORM connections (TypeOrmModule),
+ * Chron scheduling (ScheduleModule), and integrates all domain-specific feature modules like Portfolio and Uploads.
+ */
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
+    ScheduleModule.forRoot(), // Initializes Cron job architecture across the app
     ConfigModule.forRoot({
-      isGlobal: true,
+      isGlobal: true, // Makes Env vars accessible globally without re-importing the module
     }),
     TypeOrmModule.forRoot({
       type: 'mysql',
@@ -24,8 +29,8 @@ import { ScheduleModule } from '@nestjs/schedule';
       username: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'portfolio_db',
-      autoLoadEntities: true,
-      synchronize: true, // Only for development, syncs entities with the database
+      autoLoadEntities: true, // Automatically registers imported TypeORM @Entity classes
+      synchronize: true, // Auto-syncs schema changes to MariaDB (Not recommended for Production)
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -34,7 +39,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         signOptions: { expiresIn: '1d' },
       }),
       inject: [ConfigService],
-      global: true, // Making JwtModule global so we don't need to import it specifically into AuthModule
+      global: true, // Global JWT configuration, injectable into AuthGuard everywhere
     }),
     UsersModule,
     PortfolioModule,

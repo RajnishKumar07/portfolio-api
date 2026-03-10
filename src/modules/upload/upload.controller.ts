@@ -3,11 +3,20 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 
+/**
+ * Controller handling distinct file upload requests.
+ * Uses `AuthGuard` to ensure only logged-in users can upload media to Cloudinary.
+ */
 @Controller('upload')
 @UseGuards(AuthGuard)
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
+  /**
+   * Accepts a multipart/form-data payload for uploading images or PDFs.
+   * Leverages NestJS pipes to automatically reject dangerously large files (>10MB) 
+   * or unsupported arbitrary file types (like scripts or executables).
+   */
   @Post('image')
   @UseInterceptors(FileInterceptor('file'))
   async uploadImage(

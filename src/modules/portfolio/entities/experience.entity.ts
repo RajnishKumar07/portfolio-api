@@ -7,6 +7,11 @@ import {
 } from 'typeorm';
 import { Portfolio } from './portfolio.entity';
 
+/**
+ * Represents a single work experience entry within a Portfolio.
+ * Utilizes generic `json` column types for `responsibilities`, `projects`, and `recognition`
+ * to allow flexible frontend data structures without requiring rigid separate DB tables for each bullet point.
+ */
 @Entity('experiences')
 export class Experience {
   @PrimaryGeneratedColumn('uuid')
