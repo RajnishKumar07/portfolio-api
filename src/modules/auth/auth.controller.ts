@@ -3,10 +3,12 @@ import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { createResponse } from '../../common/utils/response.util';
 import { HandleJwtService } from '../../shared/services/jwt.service';
+import { SendOtpDto } from './dto/send-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { createResponse } from '../../common/utils/response.util';
 
 /**
  * REST Controller managing user authentication.
@@ -39,6 +41,24 @@ export class AuthController {
   }
 
   /**
+   * Sends an OTP code to the provided email.
+   */
+  @Post('send-otp')
+  async sendOtp(@Body() sendOtpDto: SendOtpDto) {
+    const result = await this.authService.sendOtp(sendOtpDto);
+    return createResponse(HttpStatus.OK, result.message);
+  }
+
+  /**
+   * Resets the user's password using a valid OTP code.
+   */
+  @Post('reset-password')
+  async resetPassword(@Body() resetDto: ResetPasswordDto) {
+    await this.authService.resetPassword(resetDto);
+    return createResponse(HttpStatus.OK, 'Password reset successfully.');
+  }
+
+  /**
    * Authenticates a user and issues a secure HTTP-Only JWT Cookie.
    * Modifies the `express` Response directly to inject the securely signed cookie.
    */
@@ -59,7 +79,7 @@ export class AuthController {
 
     // 2. Return a pristine JSON payload without the token (as the browser handles the cookie automatically)
     return createResponse(HttpStatus.OK, 'Login successful', {
-      id: user.id,
+      userId: user.id,
       email: user.email
     });
   }

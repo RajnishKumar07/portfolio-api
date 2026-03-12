@@ -1,9 +1,12 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Delete, Put } from '@nestjs/common';
 import { PortfolioService } from './portfolio.service';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
+import { ContactFormDto } from './dto/contact-form.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { createResponse } from '../../common/utils/response.util';
+import { HttpStatus } from '@nestjs/common';
 
 /**
  * REST Controller for managing Portfolios.
@@ -48,8 +51,25 @@ export class PortfolioController {
    */
   @Get(':slug')
   @UseGuards(OptionalAuthGuard)
-  findOne(@Param('slug') slug: string, @CurrentUser() user: any) {
-    return this.portfolioService.findOneBySlug(slug, user?.userId);
+  async findOne(@Param('slug') slug: string, @CurrentUser() user: any) {
+    const portfolio = await this.portfolioService.findOneBySlug(slug, user?.userId);
+    const { user: owner, ...rest } = portfolio;
+    return { ...rest, userId: owner?.id ?? null };
+  }
+
+  /**
+   * Dispatches an email from a public visitor to the portfolio owner.
+   * Sends a confirmation to the visitor and the message to the owner via SMTP.
+   * @param slug Portfolio identifier.
+   * @param contactFormDto The embedded message payload.
+   */
+  @Post(':slug/contact')
+  async contactOwner(
+    @Param('slug') slug: string,
+    @Body() contactFormDto: ContactFormDto,
+  ) {
+    await this.portfolioService.sendContactForm(slug, contactFormDto);
+    return createResponse(HttpStatus.OK, 'Message sent successfully.');
   }
 
   /**

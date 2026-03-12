@@ -42,4 +42,11 @@ export class UsersService {
   async comparePasswords(plain: string, hash: string): Promise<boolean> {
     return await bcrypt.compare(plain, hash);
   }
+
+  async updatePassword(userId: string, passwordHash: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User not found.');
+    user.passwordHash = passwordHash;
+    return await this.userRepository.save(user);
+  }
 }

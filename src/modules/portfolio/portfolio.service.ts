@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Portfolio } from './entities/portfolio.entity';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
+import { ContactFormDto } from './dto/contact-form.dto';
+import { MailService } from '../mail/mail.service';
 
 /**
  * Core business logic service for Portfolios.
@@ -13,6 +15,7 @@ export class PortfolioService {
   constructor(
     @InjectRepository(Portfolio)
     private readonly portfolioRepository: Repository<Portfolio>,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -66,6 +69,25 @@ export class PortfolioService {
     }
 
     return portfolio;
+  }
+
+  /**
+   * Processes a contact form submission from a portfolio visitor.
+   */
+  async sendContactForm(slug: string, contactFormDto: ContactFormDto): Promise<void> {
+    const portfolio = await this.findOneBySlug(slug);
+    
+    // Safety check: ensure the owner has an email address
+    if (!portfolio.user?.email) {
+      throw new NotFoundException('Portfolio owner email not found.');
+    }
+
+    // Dispatch the emails
+    await this.mailService.sendContactEmail(
+      portfolio.user.email,
+      contactFormDto.visitorEmail,
+      contactFormDto.message
+    );
   }
 
   /**

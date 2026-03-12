@@ -10,6 +10,7 @@ import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { MailModule } from './modules/mail/mail.module';
 
 /**
  * The root module of the application.
@@ -46,6 +47,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     SharedModule,
     AuthModule,
     UploadModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

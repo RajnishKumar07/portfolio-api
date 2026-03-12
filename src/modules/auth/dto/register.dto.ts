@@ -12,4 +12,9 @@ export class RegisterDto {
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters long.' })
   password: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6, { message: 'OTP code must be at least 6 characters.' })
+  otp: string;
 }

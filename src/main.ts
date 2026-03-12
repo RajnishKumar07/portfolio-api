@@ -17,7 +17,7 @@ async function bootstrap() {
   const cookieSecret = configService.get<string>('JWT_SECRET') || 'default-secret';
 
   // Prefix all routes with '/api' (e.g., http://localhost:3000/api/portfolio)
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api'); // trigger hot-reload for new .env variables
 
   // Enable Cross-Origin Resource Sharing (CORS) strictly for the local Angular frontend
   app.enableCors({
