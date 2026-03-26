@@ -36,10 +36,10 @@ export class Experience {
   responsibilities: string[];
 
   @Column('json', { nullable: true })
-  projects: any[];
+  projects: { name: string; tech: string; points: string[] }[];
 
   @Column('json', { nullable: true })
-  recognition: any;
+  recognition: { title: string; date: string; description: string };
 
   @Column({ default: 0 })
   displayOrder: number;

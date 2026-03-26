@@ -1,6 +1,37 @@
 import { IsString, IsBoolean, IsOptional, ValidateNested, IsArray, IsUrl } from 'class-validator';
 import { Type } from 'class-transformer';
 
+export class ProjectLinkDto {
+  @IsString()
+  label: string;
+
+  @IsString()
+  url: string;
+}
+
+export class ExperienceProjectDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  tech: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  points: string[];
+}
+
+export class RecognitionDto {
+  @IsString()
+  title: string;
+
+  @IsString()
+  date: string;
+
+  @IsString()
+  description: string;
+}
+
 /**
  * Data Transfer Object for validating Personal Information payloads.
  * Includes optional fields like `resumeUrl` (Cloudinary upload payload) and
@@ -77,10 +108,14 @@ export class CreateExperienceDto {
 
   @IsArray()
   @IsOptional()
-  projects?: any[];
+  @ValidateNested({ each: true })
+  @Type(() => ExperienceProjectDto)
+  projects?: ExperienceProjectDto[];
 
   @IsOptional()
-  recognition?: any;
+  @ValidateNested()
+  @Type(() => RecognitionDto)
+  recognition?: RecognitionDto;
 }
 
 /**
@@ -137,7 +172,9 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsArray()
-  links?: any[];
+  @ValidateNested({ each: true })
+  @Type(() => ProjectLinkDto)
+  links?: ProjectLinkDto[];
 
   @IsOptional()
   @IsArray()

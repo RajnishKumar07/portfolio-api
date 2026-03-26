@@ -5,6 +5,7 @@ import { Portfolio } from './entities/portfolio.entity';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { ContactFormDto } from './dto/contact-form.dto';
 import { MailService } from '../mail/mail.service';
+import { User } from '../users/entities/user.entity';
 
 /**
  * Core business logic service for Portfolios.
@@ -22,11 +23,11 @@ export class PortfolioService {
    * Persists a newly created portfolio into the database.
    * Explicitly maps the incoming auth `userId` to the TypeORM relational `user.id`.
    */
-  async create(createPortfolioDto: CreatePortfolioDto): Promise<Portfolio> {
+  async create(createPortfolioDto: CreatePortfolioDto & { userId?: string }): Promise<Portfolio> {
     const portfolio = this.portfolioRepository.create(createPortfolioDto);
     // Explicitly map the string userId (from our custom auth) into the user relation DB field if needed
-    if ((createPortfolioDto as any).userId) {
-      portfolio.user = { id: (createPortfolioDto as any).userId } as any;
+    if (createPortfolioDto.userId) {
+      portfolio.user = { id: createPortfolioDto.userId } as User;
     }
     return await this.portfolioRepository.save(portfolio);
   }
@@ -112,7 +113,7 @@ export class PortfolioService {
     
     // 4. Construct the brand new unified tree incorporating all updated nested payloads
     const portfolio = this.portfolioRepository.create(updatePortfolioDto);
-    portfolio.user = { id: userId } as any;
+    portfolio.user = { id: userId } as User;
     return await this.portfolioRepository.save(portfolio);
   }
 

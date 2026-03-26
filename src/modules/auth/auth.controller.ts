@@ -9,6 +9,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { createResponse } from '../../common/utils/response.util';
+import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 
 /**
  * REST Controller managing user authentication.
@@ -27,7 +28,7 @@ export class AuthController {
    */
   @Get('me')
   @UseGuards(AuthGuard)
-  async getMe(@CurrentUser() user: any) {
+  async getMe(@CurrentUser() user: JwtPayload) {
     return createResponse(HttpStatus.OK, 'Authenticated user', user);
   }
 

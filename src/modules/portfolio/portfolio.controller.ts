@@ -7,6 +7,7 @@ import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { createResponse } from '../../common/utils/response.util';
 import { HttpStatus } from '@nestjs/common';
+import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 
 /**
  * REST Controller for managing Portfolios.
@@ -26,9 +27,9 @@ export class PortfolioController {
   @UseGuards(AuthGuard)
   create(
     @Body() createPortfolioDto: CreatePortfolioDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.portfolioService.create({ ...createPortfolioDto, userId: user.userId } as any);
+    return this.portfolioService.create({ ...createPortfolioDto, userId: user.userId } as CreatePortfolioDto & { userId?: string });
   }
 
   /**
@@ -38,7 +39,7 @@ export class PortfolioController {
    */
   @Get('user/me')
   @UseGuards(AuthGuard)
-  findAllByUser(@CurrentUser() user: any) {
+  findAllByUser(@CurrentUser() user: JwtPayload) {
     return this.portfolioService.findAllByUser(user.userId);
   }
 
@@ -51,7 +52,7 @@ export class PortfolioController {
    */
   @Get(':slug')
   @UseGuards(OptionalAuthGuard)
-  async findOne(@Param('slug') slug: string, @CurrentUser() user: any) {
+  async findOne(@Param('slug') slug: string, @CurrentUser() user: JwtPayload) {
     const portfolio = await this.portfolioService.findOneBySlug(slug, user?.userId);
     const { user: owner, ...rest } = portfolio;
     return { ...rest, userId: owner?.id ?? null };
@@ -84,7 +85,7 @@ export class PortfolioController {
   update(
     @Param('slug') slug: string,
     @Body() updatePortfolioDto: CreatePortfolioDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: JwtPayload,
   ) {
     return this.portfolioService.updateBySlug(slug, updatePortfolioDto, user.userId);
   }
@@ -97,7 +98,7 @@ export class PortfolioController {
    */
   @Delete(':slug')
   @UseGuards(AuthGuard)
-  delete(@Param('slug') slug: string, @CurrentUser() user: any) {
+  delete(@Param('slug') slug: string, @CurrentUser() user: JwtPayload) {
     return this.portfolioService.deleteBySlug(slug, user.userId);
   }
 }

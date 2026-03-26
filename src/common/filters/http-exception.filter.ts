@@ -11,7 +11,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   /**
    * Primary interception layer. Catches raw errors and formats them into standardized JSON.
    */
-  catch(exception: any, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest();
     const response = ctx.getResponse();
@@ -31,7 +31,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   /**
    * Safely extracts the HTTP status, falling back to 500.
    */
-  private extractStatus(exception: any): number {
+  private extractStatus(exception: unknown): number {
     if (exception instanceof HttpException) {
       return exception.getStatus();
     }
@@ -41,7 +41,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   /**
    * Recursively unboxes validation payloads from NestJS Class-Validator.
    */
-  private extractMessage(exception: any): any {
+  private extractMessage(exception: unknown): string | object {
     if (!(exception instanceof HttpException)) {
       return 'Internal server error';
     }
@@ -54,15 +54,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
    * Handles deeply nested object mapping specifically for DTO transform errors.
    */
   // eslint-disable-next-line complexity
-  private parseValidationPayload(payload: any): any {
+  private parseValidationPayload(payload: unknown): string | object {
     if (typeof payload !== 'object' || payload === null) {
-      return payload;
+      return payload as string | object;
     }
 
-    if (Array.isArray(payload['message'])) {
-      return payload['message'][0]; // Return the first human-readable class-validator error
+    const obj = payload as Record<string, unknown>;
+
+    if (Array.isArray(obj['message']) && typeof obj['message'][0] === 'string') {
+      return obj['message'][0]; // Return the first human-readable class-validator error
     }
 
-    return payload['message'] || payload;
+    return (obj['message'] as string) || obj;
   }
 }

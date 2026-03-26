@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { CookieOptions, Response } from 'express';
+import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class HandleJwtService {
@@ -10,7 +11,7 @@ export class HandleJwtService {
     private jwtService: JwtService,
   ) {}
 
-  async createJWT(payload: any) {
+  async createJWT(payload: JwtPayload) {
     const token = await this.jwtService.signAsync(payload);
     return token;
   }
@@ -19,7 +20,7 @@ export class HandleJwtService {
     return await this.jwtService.verifyAsync(token);
   }
 
-  async attachCookiesToResponse(res: Response, user: any) {
+  async attachCookiesToResponse(res: Response, user: JwtPayload) {
     const token = await this.createJWT(user);
     const oneDay = 1000 * 60 * 60 * 24;
     

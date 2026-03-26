@@ -42,7 +42,7 @@ export class Project {
   techStack: string[];
 
   @Column('json', { nullable: true })
-  links: any[];
+  links: { label: string; url: string }[];
 
   @Column('simple-array')
   tags: string[];
