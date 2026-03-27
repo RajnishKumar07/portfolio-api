@@ -32,6 +32,7 @@ import { MailModule } from './modules/mail/mail.module';
       database: process.env.DB_NAME || 'portfolio_db',
       autoLoadEntities: true, // Automatically registers imported TypeORM @Entity classes
       synchronize: true, // Auto-syncs schema changes to MariaDB (Not recommended for Production)
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
