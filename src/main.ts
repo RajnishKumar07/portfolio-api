@@ -21,7 +21,7 @@ async function bootstrap() {
 
   // Enable Cross-Origin Resource Sharing (CORS) strictly for the local Angular frontend
   app.enableCors({
-    origin: ['http://localhost:4200'], 
+    origin: ['http://localhost:4200', 'https://portfolio-app-io.vercel.app'], 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true, // Required to allow cookies to be passed cross-origin
   });
