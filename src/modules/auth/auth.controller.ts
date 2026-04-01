@@ -92,9 +92,12 @@ export class AuthController {
   async logout(@Res({ passthrough: true }) response: Response) {
     // Overwrite the existing secure cookie with a dummy value ('logout')
     // and force it to expire immediately (Date.now())
+    const isProduction = process.env.NODE_ENV === 'production';
     response.cookie('token', 'logout', {
       httpOnly: true,
       expires: new Date(Date.now()),
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
     });
 
     return createResponse(HttpStatus.OK, 'User logged out successfully!');

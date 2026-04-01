@@ -24,11 +24,13 @@ export class HandleJwtService {
     const token = await this.createJWT(user);
     const oneDay = 1000 * 60 * 60 * 24;
     
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    
     const cookieConfig: CookieOptions = {
       httpOnly: true,
       expires: new Date(Date.now() + oneDay),
-      secure: false, // Set to true in production with HTTPS
-      sameSite: 'lax',
+      secure: isProduction,          // Must be true for cross-origin HTTPS
+      sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-site cookies
       signed: true,
     };
 
